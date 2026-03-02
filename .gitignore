@@ -1,0 +1,6 @@
+.venv
+__pycache__/
+.claude/
+.gradio/
+data/
+.env
