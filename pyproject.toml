@@ -5,11 +5,7 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
-    "markitdown[all]>=0.1.5",
-    "nvitop>=1.6.2",
-    "openai>=2.21.0",
-    "vllm>=0.15.1",
-    "pydantic>=2.10.0",
     "gradio[mcp]>=6.8.0",
+    "nvitop>=1.6.2",
     "sentence-transformers>=5.2.3",
 ]

@@ -11,4 +11,5 @@ uv run vllm serve cyankiwi/Ministral-3-14B-Instruct-2512-AWQ-4bit \
   --enable-auto-tool-choice \
   --tool-call-parser mistral \
   --port 8000 \
-  --max-model-len 40960
+  --max-model-len 49152 \
+  --language-model-only
