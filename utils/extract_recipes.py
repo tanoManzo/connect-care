@@ -152,9 +152,6 @@ def main() -> None:
     recipe_directory = Path("data/recipes")
     md_files = list(recipe_directory.rglob("*.md"))
 
-    # # Test only this one recipe
-    # md_files = [f for f in md_files if "pasta-med-pesto-boenner-og-kartofler" in str(f)]
-
     with ThreadPoolExecutor(max_workers=multiprocessing.cpu_count()) as executor:
         future_to_file = {
             executor.submit(extract_recipe_from_file, str(md_file), client): md_file
