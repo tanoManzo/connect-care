@@ -61,8 +61,30 @@ def search(
 
     return top_results
 
+def search_wrapper(
+    query: str,
+    top_k: int = 5
+)-> str:
+    results = search(query, top_k)
+    return json.dumps(results, indent=4)
+
 with gr.Blocks() as demo:
     gr.api(search)
+    with gr.Row():
+        input_textbox = gr.Textbox(label="Query")
+        topk_number = gr.Number(
+            label="Top K",
+            value=5,
+            precision=0
+        )
+    with gr.Column():
+        submit_button = gr.Button("Search")
+        output_json = gr.JSON(label="Results")
+    submit_button.click(
+        search_wrapper,
+        inputs=[input_textbox, topk_number],
+        outputs=output_json
+    )
 
 demo.launch(
     share=True,

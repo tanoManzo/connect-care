@@ -8,7 +8,11 @@
       },
       "models": {
         "llama-cpp-model": {
-          "name": "llama-cpp-model"
+          "name": "llama-cpp-model",
+          "limit": {
+            "context": 131072,
+            "output": 65536
+          }
         }
       }
     }
@@ -16,5 +20,12 @@
   "permission": {
     "edit": "ask",
     "bash": "ask"
-  }
+  },
+  // "mcp": {
+  //   "connect-care-search": {
+  //     "type": "remote",
+  //     "enabled": true,
+  //     "url": ""
+  //   }
+  // }
 }
