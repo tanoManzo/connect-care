@@ -1,10 +1,13 @@
 # ----------------------------------------------------------------------------------------------------
+import os
 import json
 import torch
 import gradio as gr
 # ----------------------------------------------------------------------------------------------------
 from pathlib import Path
 from sentence_transformers import SentenceTransformer
+# ----------------------------------------------------------------------------------------------------
+SEARCH_API_TOKEN = os.environ.get("SEARCH_API_TOKEN", None)
 # ----------------------------------------------------------------------------------------------------
 RECIPES = []
 RECIPES_TO_TEXT = []
@@ -26,9 +29,11 @@ DOCUMENTS_EMBEDDING = torch.vstack(
         convert_to_numpy=False,
     )
 )
+# ----------------------------------------------------------------------------------------------------
 def search(
     query: str,
-    top_k: int = 5
+    top_k: int = 5,
+    x_api_token: gr.Header = None,
 ) -> list:
     """
     Search for recipes similar to the query.
@@ -40,6 +45,9 @@ def search(
     Returns:
         list: Top k recipe objects as dictionaries
     """
+
+    if x_api_token != SEARCH_API_TOKEN:
+        return
 
     query_embedding = MODEL.encode(
         query,
@@ -57,37 +65,44 @@ def search(
         k=top_k
     ).indices.tolist()
 
-    top_results = [RECIPES[index] for index in top_indices]
+    return [RECIPES[index] for index in top_indices]
 
-    return top_results
-
-def search_wrapper(
-    query: str,
-    top_k: int = 5
-)-> str:
-    results = search(query, top_k)
-    return json.dumps(results, indent=4)
+def _search_ui(query: str, top_k: int, token: str):
+    return search(query, top_k, x_api_token=token)
 
 with gr.Blocks() as demo:
-    gr.api(search)
+    gr.api(search, api_name="search")
     with gr.Row():
-        input_textbox = gr.Textbox(label="Query")
+        token = gr.Textbox(
+            label="Token",
+            type="password",
+            scale=1
+        )
+        input_textbox = gr.Textbox(
+            label="Query",
+            scale=8
+        )
         topk_number = gr.Number(
             label="Top K",
             value=5,
-            precision=0
+            precision=0,
+            scale=1
         )
-    with gr.Column():
-        submit_button = gr.Button("Search")
-        output_json = gr.JSON(label="Results")
-    submit_button.click(
-        search_wrapper,
-        inputs=[input_textbox, topk_number],
-        outputs=output_json
+    output_json = gr.JSON(label="Results")
+    input_textbox.change(
+        _search_ui,
+        inputs=[input_textbox, topk_number, token],
+        outputs=output_json,
+        api_name=False
     )
-
-demo.launch(
-    share=True,
-    mcp_server=True,
-)
+    input_textbox.submit(
+        _search_ui,
+        inputs=[input_textbox, topk_number, token],
+        outputs=output_json,
+        api_name=False
+    )
+    demo.launch(
+        share=True,
+        mcp_server=True
+    )
 # ----------------------------------------------------------------------------------------------------
