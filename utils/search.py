@@ -7,7 +7,9 @@ import gradio as gr
 from pathlib import Path
 from sentence_transformers import SentenceTransformer
 # ----------------------------------------------------------------------------------------------------
-SEARCH_API_TOKEN = os.environ.get("SEARCH_API_TOKEN", None)
+MODEL_NAME="jinaai/jina-embeddings-v5-text-small-retrieval"
+BATCH_SIZE=2
+API_TOKEN = os.environ.get("API_TOKEN", None)
 # ----------------------------------------------------------------------------------------------------
 RECIPES = []
 RECIPES_TO_TEXT = []
@@ -18,17 +20,19 @@ for json_file in recipes_directory.rglob("*.json"):
         RECIPES.append(recipe)                              
         RECIPES_TO_TEXT.append(f"```json\n{recipe}\n```")
 MODEL = SentenceTransformer(
-    "jinaai/jina-embeddings-v5-text-small-retrieval",
+    MODEL_NAME,
     model_kwargs={"dtype": torch.bfloat16}
 ).to("cuda")
 DOCUMENTS_EMBEDDING = torch.vstack(
     MODEL.encode(
         RECIPES_TO_TEXT,
-        batch_size=64,
+        batch_size=BATCH_SIZE,
         prompt_name="document",
         convert_to_numpy=False,
+        show_progress_bar=True
     )
 )
+torch.cuda.empty_cache()
 # ----------------------------------------------------------------------------------------------------
 def search(
     query: str,
@@ -46,7 +50,7 @@ def search(
         list: Top k recipe objects as dictionaries
     """
 
-    if x_api_token != SEARCH_API_TOKEN:
+    if x_api_token != API_TOKEN:
         return
 
     query_embedding = MODEL.encode(
@@ -67,9 +71,13 @@ def search(
 
     return [RECIPES[index] for index in top_indices]
 
-def _search_ui(query: str, top_k: int, token: str):
+def _search_ui(
+    query: str,
+    top_k: int = 5,
+    token: str = None,
+) -> list:
     return search(query, top_k, x_api_token=token)
-
+# ----------------------------------------------------------------------------------------------------
 with gr.Blocks() as demo:
     gr.api(search, api_name="search")
     with gr.Row():
