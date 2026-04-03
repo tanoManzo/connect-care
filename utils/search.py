@@ -7,8 +7,8 @@ import gradio as gr
 from pathlib import Path
 from sentence_transformers import SentenceTransformer
 # ----------------------------------------------------------------------------------------------------
-# MODEL_NAME="jinaai/jina-embeddings-v5-text-nano-retrieval"
-MODEL_NAME="jinaai/jina-embeddings-v5-text-small-retrieval"
+MODEL_NAME="jinaai/jina-embeddings-v5-text-nano-retrieval"
+# MODEL_NAME="jinaai/jina-embeddings-v5-text-small-retrieval"
 BATCH_SIZE=2
 TRUNCATE_DIM=None
 API_TOKEN = os.environ.get("API_TOKEN", None)
@@ -54,10 +54,13 @@ def search(
         list: Top k recipe objects as dictionaries
     """
 
-    if x_api_token != API_TOKEN:
-        return
-    
-    if (query is None) or (query == "") or (top_k is None) or (top_k <= 0):
+    if (
+        x_api_token != API_TOKEN or
+        query is None or
+        query == "" or
+        top_k is None or
+        top_k <= 0
+    ):
         return
 
     query_embedding = MODEL.encode(
