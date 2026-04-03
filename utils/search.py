@@ -57,7 +57,7 @@ def search(
     if x_api_token != API_TOKEN:
         return
     
-    if top_k is None:
+    if (query is None) or (query == "") or (top_k is None) or (top_k <= 0):
         return
 
     query_embedding = MODEL.encode(
