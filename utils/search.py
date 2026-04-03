@@ -7,8 +7,10 @@ import gradio as gr
 from pathlib import Path
 from sentence_transformers import SentenceTransformer
 # ----------------------------------------------------------------------------------------------------
+# MODEL_NAME="jinaai/jina-embeddings-v5-text-nano-retrieval"
 MODEL_NAME="jinaai/jina-embeddings-v5-text-small-retrieval"
 BATCH_SIZE=2
+TRUNCATE_DIM=None
 API_TOKEN = os.environ.get("API_TOKEN", None)
 # ----------------------------------------------------------------------------------------------------
 RECIPES = []
@@ -21,7 +23,9 @@ for json_file in recipes_directory.rglob("*.json"):
         RECIPES_TO_TEXT.append(f"```json\n{recipe}\n```")
 MODEL = SentenceTransformer(
     MODEL_NAME,
-    model_kwargs={"dtype": torch.bfloat16}
+    model_kwargs={"dtype": torch.bfloat16},
+    truncate_dim=TRUNCATE_DIM,
+    trust_remote_code=True
 ).to("cuda")
 DOCUMENTS_EMBEDDING = torch.vstack(
     MODEL.encode(
@@ -51,6 +55,9 @@ def search(
     """
 
     if x_api_token != API_TOKEN:
+        return
+    
+    if top_k is None:
         return
 
     query_embedding = MODEL.encode(
@@ -101,13 +108,29 @@ with gr.Blocks() as demo:
         _search_ui,
         inputs=[input_textbox, topk_number, token],
         outputs=output_json,
-        api_name=False
+        api_name=False,
+        show_progress=False
     )
     input_textbox.submit(
         _search_ui,
         inputs=[input_textbox, topk_number, token],
         outputs=output_json,
-        api_name=False
+        api_name=False,
+        show_progress=False
+    )
+    token.change(
+        _search_ui,
+        inputs=[input_textbox, topk_number, token],
+        outputs=output_json,
+        api_name=False,
+        show_progress=False
+    )
+    topk_number.change(
+        _search_ui,
+        inputs=[input_textbox, topk_number, token],
+        outputs=output_json,
+        api_name=False,
+        show_progress=False
     )
     demo.launch(
         share=True,
