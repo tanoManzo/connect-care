@@ -5,9 +5,8 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
-    "gradio[mcp]>=6.8.0",
-    "markitdown[all]>=0.1.5",
-    "nvitop>=1.6.2",
-    "sentence-transformers>=5.2.3",
-    "vllm>=0.18.0",
+    "bitsandbytes>=0.49.2",
+    "docling>=2.92.0",
+    "sentence-transformers>=5.4.1",
+    "vllm>=0.20.0",
 ]
