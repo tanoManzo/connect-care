@@ -5,4 +5,5 @@ uv run vllm serve \
     --host 0.0.0.0 \
     --port 3960 \
     --quantization bitsandbytes \
-    --max-model-len 131072
+    --max-model-len 131072 \
+    --language-model-only

@@ -204,8 +204,8 @@ def main():
     parser.add_argument(
         "--max-workers",
         type=int,
-        default=8,
-        help="Maximum number of parallel workers (default: 8)",
+        default=12,
+        help="Maximum number of parallel workers (default: 12)",
     )
     args = parser.parse_args()
 
@@ -213,7 +213,7 @@ def main():
     client = OpenAI(
         base_url="http://localhost:3960/v1",
         api_key="EMPTY",
-        timeout=120,
+        timeout=1200,
     )
 
     # Validate recipe directory
@@ -224,6 +224,7 @@ def main():
 
     # Find all Markdown files recursively
     md_files = list(recipe_directory.rglob("*.md"))
+    # md_files = [Path("data/recipes/canalsalut.gencat.cat/primers-plats/pate-olives.md")]
 
     # Process files in parallel using thread pool
     with ThreadPoolExecutor(max_workers=args.max_workers) as executor:
