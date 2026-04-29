@@ -5,7 +5,6 @@
 import os
 import json
 import argparse
-import multiprocessing
 # ----------------------------------------------------------------------------------------------------
 from typing import List
 from pathlib import Path
@@ -202,13 +201,19 @@ def main():
         default="data/recipes",
         help="Path to the recipe directory (default: data/recipes)",
     )
+    parser.add_argument(
+        "--max-workers",
+        type=int,
+        default=12,
+        help="Maximum number of parallel workers (default: 12)",
+    )
     args = parser.parse_args()
 
     # Initialize OpenAI client (connecting to local API server)
     client = OpenAI(
         base_url="http://localhost:3960/v1",
         api_key="EMPTY",
-        timeout=120,  # 2 minute timeout for long-running extractions
+        timeout=120,
     )
 
     # Validate recipe directory
@@ -221,7 +226,7 @@ def main():
     md_files = list(recipe_directory.rglob("*.md"))
 
     # Process files in parallel using thread pool
-    with ThreadPoolExecutor(max_workers=multiprocessing.cpu_count()) as executor:
+    with ThreadPoolExecutor(max_workers=args.max_workers) as executor:
         # Submit all extraction tasks
         future_to_file = {
             executor.submit(extract_recipe_from_file, str(md_file), client): md_file
