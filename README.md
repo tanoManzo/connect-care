@@ -30,7 +30,7 @@ bash launch_convert_to_markdown.sh
 
 This processes all `*.pdf` and `*.txt` files in `data/recipes/` and creates corresponding `.md` files.
 
-Next, ensure the vLLM server is running in the background (e.g., separate terminal):
+Next, ensure the [vLLM](https://vllm.ai) server is running in the background (e.g., separate terminal):
 
 ```bash
 bash launch_vllm_server.sh
