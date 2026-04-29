@@ -204,8 +204,8 @@ def main():
     parser.add_argument(
         "--max-workers",
         type=int,
-        default=12,
-        help="Maximum number of parallel workers (default: 12)",
+        default=8,
+        help="Maximum number of parallel workers (default: 8)",
     )
     args = parser.parse_args()
 

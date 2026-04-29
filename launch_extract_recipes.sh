@@ -2,4 +2,4 @@
 
 uv run utils/extract_recipes.py \
     --recipe-dir data/recipes \
-    --max-workers 12
+    --max-workers 8
