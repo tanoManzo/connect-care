@@ -9,11 +9,10 @@ import requests
 # ----------------------------------------------------------------------------------------------------
 from pathlib import Path
 from tqdm.auto import tqdm
-from docling.datamodel.base_models import InputFormat
-from docling.document_converter import DocumentConverter
+from markitdown import MarkItDown, StreamInfo
 # ----------------------------------------------------------------------------------------------------
-# Global document converter instance
-CONVERTER = DocumentConverter()
+# Global markitdown instance
+MARKITDOWN = MarkItDown()
 # ----------------------------------------------------------------------------------------------------
 def convert_file(
     file_path,
@@ -29,9 +28,9 @@ def convert_file(
 
         match file_path.suffix:
             case ".pdf":
-                # Convert PDF directly using docling
-                result = CONVERTER.convert(str(file_path))
-                markdown_content = result.document.export_to_markdown()
+                # Convert PDF directly using markitdown
+                result = MARKITDOWN.convert(str(file_path))
+                markdown_content = result.text_content
 
             case ".txt":
                 # TXT files contain URLs to fetch and convert
@@ -49,11 +48,11 @@ def convert_file(
                 response.raise_for_status()
 
                 # Convert HTML response to Markdown
-                result = CONVERTER.convert_string(
-                    response.text,
-                    format=InputFormat.HTML,
+                stream = io.BytesIO(response.content)
+                result = MARKITDOWN.convert(
+                    stream, stream_info=StreamInfo(extension=".html")
                 )
-                markdown_content = result.document.export_to_markdown()
+                markdown_content = result.text_content
 
             case _:
                 raise ValueError(f"Unknown file type: {file_path.suffix}")
