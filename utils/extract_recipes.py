@@ -126,10 +126,10 @@ def main():
 
                 # Generate unique recipe ID from relative path
                 relative_path = recipe_file.relative_to(recipe_directory)
-                recipe_id = str(relative_path.with_suffix(""))
+                recipe_id = f"{relative_path.with_suffix('')}.source.{recipe_data.source_language}"
 
                 # Write extracted data to JSON file
-                output_json_file = recipe_file.with_suffix(".json")
+                output_json_file = recipe_file.with_name(f"{recipe_file.stem}.source.{recipe_data.source_language}.json")
                 with open(output_json_file, "w", encoding="utf-8") as output_file:
                     recipe_dict = recipe_data.model_dump()
                     recipe_dict["id"] = recipe_id

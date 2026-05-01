@@ -111,8 +111,8 @@ class RecipeInfo(BaseModel):
         - If no notes are mentioned, return JSON null.
         """
     )
-    language: Literal["en", "es", "ca", "da"] = Field(
-        title="language",
+    source_language: Literal["en", "es", "ca", "da"] = Field(
+        title="source_language",
         description="""
         DESCRIPTION: Language code of the recipe source.
         EXTRACTION INSTRUCTIONS:
