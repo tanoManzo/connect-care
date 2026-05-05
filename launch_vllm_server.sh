@@ -1,12 +1,11 @@
 #!/bin/bash
 
-uv run vllm serve cyankiwi/Ministral-3-14B-Instruct-2512-AWQ-4bit \
-  --tokenizer_mode mistral \
-  --config_format mistral \
-  --load_format mistral \
-  --enable-auto-tool-choice \
-  --tool-call-parser mistral \
-  --port 3960 \
-  --max-model-len 49152 \
-  --gpu-memory-utilization 0.95 \
-  --language-model-only
+uv run vllm serve \
+    --model cyankiwi/gemma-4-26B-A4B-it-AWQ-4bit \
+    --host 0.0.0.0 \
+    --port 3960 \
+    --max-model-len 32768 \
+    --kv-cache-dtype fp8 \
+    --language-model-only \
+    --max-num-seqs 4 \
+    --gpu-memory-utilization 0.95

@@ -5,4 +5,4 @@ uv run utils/search_server.py \
     --batch-size 8 \
     --truncate-dim None \
     --cuda \
-    --recipes-jsonl data/recipes.jsonl
+    --language en,es,ca,da

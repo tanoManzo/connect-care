@@ -1,6 +1,6 @@
 # connect-care
 
-A recipe management system that transforms unstructured recipe sources ([PDFs](https://en.wikipedia.org/wiki/PDF), web pages) into structured, searchable recipe data. The system uses [LLM](https://en.wikipedia.org/wiki/Large_language_model)-based extraction to parse recipes into multilingual [JSON](https://en.wikipedia.org/wiki/JSON) format (English, Spanish, Catalan, Danish) and provides semantic search capabilities via vector embeddings. Built with [Gradio](https://gradio.app/) and exposed via [MCP](https://modelcontextprotocol.io/docs/getting-started/intro) for AI assistant integration.
+A recipe management system that transforms unstructured recipe sources ([PDFs](https://en.wikipedia.org/wiki/PDF), web pages) into structured, searchable recipe data. The system uses [LLM](https://en.wikipedia.org/wiki/Large_language_model)-based extraction to parse recipes into structured [JSON](https://en.wikipedia.org/wiki/JSON) format, translates them into multiple languages (English, Spanish, Catalan, Danish), and provides semantic search capabilities via vector embeddings. Built with [Gradio](https://gradio.app/) and exposed via [MCP](https://modelcontextprotocol.io/docs/getting-started/intro) for AI assistant integration.
 
 ## Prerequisites
 
@@ -20,7 +20,9 @@ uv sync
 
 ## Workflow
 
-Contact **Jean-Paul** or **Gaetano** to obtain the recipe data folder. Place the received `recipes` folder inside the `data/` directory.
+Contact Jean-Paul or Gaetano to obtain the recipe data folder. Place the received `recipes` folder inside the `data/` directory.
+
+### Convert to Markdown
 
 Convert PDF and TXT files (containing URLs to web recipes) to Markdown format:
 
@@ -30,32 +32,80 @@ bash launch_convert_to_markdown.sh
 
 This processes all `*.pdf` and `*.txt` files in `data/recipes/` and creates corresponding `.md` files.
 
-Next, ensure the [vLLM](https://vllm.ai) server is running in the background (e.g., separate terminal):
+### Start vLLM Server
+
+Ensure the [vLLM](https://vllm.ai) server is running in the background (e.g., separate terminal):
 
 ```bash
 bash launch_vllm_server.sh
 ```
 
-Then extract structured recipe information from the Markdown files:
+### Extract Recipes
+
+Extract structured recipe information from the Markdown files:
 
 ```bash
 bash launch_extract_recipes.sh
 ```
 
-This processes all `*.md` files in `data/recipes/` and creates corresponding `.json` files with structured, multilingual recipe data.
+This processes all `*.md` files in `data/recipes/` and creates corresponding `.source.<language>.json` files with structured recipe data in the source language.
 
-Merge all recipe JSON files into a single JSONL file:
+### Translate Recipes
+
+Translate extracted recipes into multiple target languages:
+
+```bash
+bash launch_translate_recipes.sh
+```
+
+This reads all `.source.<language>.json` files and generates `.target.<language>.json` files for each target language (English, Spanish, Catalan, Danish by default).
+
+### Merge Recipes by Language
+
+Merge all recipe JSON files into per-language JSONL files:
 
 ```bash
 bash launch_merge_recipes.sh
 ```
 
-This combines all `.json` files into `data/recipes.jsonl` for efficient loading by the search server.
+This combines `.source.*.json` and `.target.*.json` files into `data/recipes.<language>.jsonl` files (e.g., `data/recipes.en.jsonl`, `data/recipes.es.jsonl`, `data/recipes.ca.jsonl`, `data/recipes.da.jsonl`).
 
-Finally, for semantic search functionality, launch the search server:
+### Launch Search Server
+
+Launch the semantic search server:
 
 ```bash
-bash launch_search_server.sh
+API_TOKEN=your_token bash launch_search_server.sh
 ```
 
-This starts a [Gradio](https://gradio.app/)-based search server with [MCP](https://modelcontextprotocol.io/docs/getting-started/intro) support. The server loads recipes from the JSONL file, computes embeddings, and exposes both a web UI and API endpoints for searching recipes.
+Optionally set the `API_TOKEN` environment variable to enable authentication for the search API. This value must be provided as the token in requests to access the search endpoints.
+
+This starts a [Gradio](https://gradio.app/)-based search server with [MCP](https://modelcontextprotocol.io/docs/getting-started/intro) support. The server loads recipes from all language JSONL files, computes embeddings, and exposes both a web UI and API endpoints for searching recipes.
+
+Two access options are available:
+- Localhost: use `http://127.0.0.1:7860` for local access.
+- Gradio live: the server prints a public URL. Replace `xxxxx` in `https://xxxxx.gradio.live` with the hash printed by the server to construct the API URL.
+
+Example usage with curl:
+
+```bash
+QUERY="tarta de queso"
+TOP_K=1
+API_TOKEN="your_token"
+ADDRESS="http://127.0.0.1:7860"
+# ADDRESS="https://xxxxx.gradio.live"
+
+EVENT_ID=$(
+  curl -X POST $ADDRESS/gradio_api/call/v2/search \
+    -s \
+    -H "Content-Type: application/json" \
+    -H "X-Api-Token: $API_TOKEN" \
+    -d "{\"query\": \"$QUERY\", \"top_k\": $TOP_K}" \
+  | awk -F'"' '{print $4}'
+)
+
+curl -N $ADDRESS/gradio_api/call/v2/search/$EVENT_ID \
+  | grep '^data:' \
+  | sed 's/^data: //' \
+  | jq -r '.[0]'
+```

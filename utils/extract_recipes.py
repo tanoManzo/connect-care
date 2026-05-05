@@ -49,6 +49,7 @@ def extract_recipe_from_file(
                 - You MUST use plain text only.
                 - Do NOT invent, infer, or make up any data.
                 - ONLY extract information that is explicitly present in the recipe.
+                
                 This is the schema:
                 {RecipeInfo.model_json_schema()}
                 """,
@@ -58,8 +59,7 @@ def extract_recipe_from_file(
                 "content": content,
             }
         ],
-        text_format=RecipeInfo,
-        temperature=0
+        text_format=RecipeInfo
     )
 
     return response.output_parsed

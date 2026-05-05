@@ -29,18 +29,24 @@ def load_model_and_data(
 ):
     """Load the model and recipe data.
 
-    Loads all recipes from a single JSONL file,
+    Loads all recipes from one or more JSONL files,
     initializes the sentence transformer model, and pre-computes
     embeddings for all recipes.
     """
     global MODEL, DOCUMENTS_EMBEDDING, RECIPES, RECIPES_TO_TEXT
 
-    # Load recipes from JSONL file
-    with open(recipes_jsonl, "r", encoding="utf-8") as jsonl_file:
-        for line in jsonl_file:
-            recipe = json.loads(line.strip())
-            RECIPES.append(recipe)
-            RECIPES_TO_TEXT.append(f"```json\n{recipe}\n```")
+    # Resolve file paths (comma-separated string or single path)
+    jsonl_paths = [
+        p.strip() for p in recipes_jsonl.split(",")
+    ]
+
+    # Load recipes from all JSONL files
+    for jsonl_path in jsonl_paths:
+        with open(jsonl_path, "r", encoding="utf-8") as jsonl_file:
+            for line in jsonl_file:
+                recipe = json.loads(line.strip())
+                RECIPES.append(recipe)
+                RECIPES_TO_TEXT.append(f"```json\n{recipe}\n```")
 
     # Initialize sentence transformer model
     device = "cuda" if use_cuda else "cpu"
@@ -146,7 +152,7 @@ def main():
     )
     parser.add_argument(
         "--truncate-dim",
-        type=int,
+        type=lambda x: None if x.lower() == "none" else int(x),
         default=None,
         help="Dimension to truncate embeddings to (default: None for no truncation)"
     )
@@ -158,20 +164,36 @@ def main():
         help="Enable CUDA for encoding (default: False)"
     )
     parser.add_argument(
-        "--recipes-jsonl",
+        "--languages",
         type=str,
-        default="data/recipes.jsonl",
-        help="Path to the recipes JSONL file (default: data/recipes.jsonl)"
+        default="en,es,ca,da",
+        help="Comma-separated list of language codes for recipes (default: en,es,ca,da)"
+    )
+    parser.add_argument(
+        "--recipes-dir",
+        type=str,
+        default="data",
+        help="Directory containing recipes.<lang>.jsonl files (default: data)"
     )
 
     args = parser.parse_args()
+
+    # Discover recipes.<lang>.jsonl files in the data directory
+    languages = {language.strip() for language in args.languages.split(",")}
+    data_dir = Path(args.recipes_dir)
+    found = sorted(
+        str(jsonl_path) for jsonl_path in data_dir.glob("recipes.*.jsonl")
+        if jsonl_path.stem.startswith("recipes.")
+        and jsonl_path.stem[len("recipes."):] in languages
+    )
+    recipes_jsonl = ",".join(found)
 
     # Load model and data
     load_model_and_data(
         use_cuda=args.use_cuda,
         batch_size=args.batch_size,
         model_name=args.model,
-        recipes_jsonl=args.recipes_jsonl,
+        recipes_jsonl=recipes_jsonl,
         truncate_dim=args.truncate_dim,
     )
 
