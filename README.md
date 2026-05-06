@@ -86,7 +86,7 @@ Two access options are available:
 - Localhost: use `http://127.0.0.1:7860` for local access.
 - Gradio live: the server prints a public URL. Replace `xxxxx` in `https://xxxxx.gradio.live` with the hash printed by the server to construct the API URL.
 
-Example usage with curl:
+Example usage with `curl`:
 
 ```bash
 QUERY="tarta de queso"
