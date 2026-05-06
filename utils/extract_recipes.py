@@ -56,7 +56,10 @@ def extract_recipe_from_file(
             },
             {
                 "role": "user",
-                "content": content,
+                "content": f"""
+                This is the recipe content:
+                {content}
+                """,
             }
         ],
         text_format=RecipeInfo

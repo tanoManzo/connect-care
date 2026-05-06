@@ -64,10 +64,13 @@ def translate_recipe(
             },
             {
                 "role": "user",
-                "content": recipe_json,
+                "content": f"""
+                This is the recipe content:
+                {recipe_json}
+                """,
             }
         ],
-        text_format=RecipeInfo
+        text_format=RecipeInfo,
     )
 
     translated = response.output_parsed
