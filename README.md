@@ -75,12 +75,12 @@ This combines `.source.*.json` and `.target.*.json` files into `data/recipes.<la
 Launch the semantic search server:
 
 ```bash
-API_TOKEN=your_token bash launch_search_server.sh
+API_TOKEN="connect-care" bash launch_search_server.sh
 ```
 
 Optionally set the `API_TOKEN` environment variable to enable authentication for the search API. This value must be provided as the token in requests to access the search endpoints.
 
-This starts a [Gradio](https://gradio.app/)-based search server with [MCP](https://modelcontextprotocol.io/docs/getting-started/intro) support. The server loads recipes from all language JSONL files, computes embeddings, and exposes both a web UI and API endpoints for searching recipes.
+This starts a [Gradio](https://gradio.app/)-based search server with [MCP](https://modelcontextprotocol.io/docs/getting-started/intro) support. The server loads recipes from language JSONL files, computes embeddings per language, and exposes both a web UI and API endpoints for searching recipes. Use the `language` parameter to filter results by language (defaults to `"en"`).
 
 Two access options are available:
 - Localhost: use `http://127.0.0.1:7860` for local access.
@@ -89,9 +89,9 @@ Two access options are available:
 Example usage with `curl`:
 
 ```bash
-QUERY="tarta de queso"
+QUERY="cheesecake"
 TOP_K=1
-API_TOKEN="your_token"
+API_TOKEN="connect-care"
 ADDRESS="http://127.0.0.1:7860"
 # ADDRESS="https://xxxxx.gradio.live"
 
@@ -100,7 +100,7 @@ EVENT_ID=$(
     -s \
     -H "Content-Type: application/json" \
     -H "X-Api-Token: $API_TOKEN" \
-    -d "{\"query\": \"$QUERY\", \"top_k\": $TOP_K}" \
+    -d "{\"query\": \"$QUERY\", \"top_k\": $TOP_K, \"language\": \"en\"}" \
   | awk -F'"' '{print $4}'
 )
 
