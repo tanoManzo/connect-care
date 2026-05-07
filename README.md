@@ -82,7 +82,7 @@ To enable GPU acceleration, uncomment the `--cuda` flag in `launch_search_server
 
 Optionally set the `API_TOKEN` environment variable to enable authentication for the search API. This value must be provided as the token in requests to access the search endpoints.
 
-This starts a [Gradio](https://gradio.app/)-based search server with [MCP](https://modelcontextprotocol.io/docs/getting-started/intro) support. The server loads recipes from language JSONL files, computes embeddings per language, and exposes both a web UI and API endpoints for searching recipes. Supported languages are English (`en`), Spanish (`es`), Catalan (`ca`), and Danish (`da`). Use the `language` parameter to filter results by language (defaults to `"en"`).
+This starts a [Gradio](https://gradio.app/)-based search server with [MCP](https://modelcontextprotocol.io/docs/getting-started/intro) support. The server loads recipes from language JSONL files, computes embeddings per language, and exposes both a web UI and API endpoints for searching recipes. Supported languages are English (en), Spanish (es), Catalan (ca), and Danish (da). Use the `language` parameter to filter results by language (defaults to `"en"`).
 
 Two access options are available:
 - Localhost: use `http://127.0.0.1:7860` for local access.
