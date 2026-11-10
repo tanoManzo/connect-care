@@ -5,6 +5,7 @@
 # ----------------------------------------------------------------------------------------------------
 import os
 import json
+import re
 import torch
 import argparse
 import gradio as gr
@@ -21,6 +22,46 @@ RECIPES_BY_LANGUAGE = {}  # language -> list of recipe dicts
 RECIPES_TO_TEXT_BY_LANGUAGE = {}  # language -> list of text representations
 DOCUMENTS_EMBEDDING_BY_LANGUAGE = {}  # language -> pre-computed embeddings tensor
 LANGUAGES = []  # sorted list of loaded language codes
+INGREDIENT_EXCLUSION_PATTERN = re.compile(
+    r"\b(?:no|without|exclude|excluding|free\s+of)\s+([a-z][a-z-]*)\b",
+    re.IGNORECASE,
+)
+# ----------------------------------------------------------------------------------------------------
+def _ingredient_names(recipe: dict) -> list:
+    """Return ingredient names from a recipe's structured ingredient sections."""
+    return [
+        ingredient["name"]
+        for section in recipe.get("ingredient_sections", [])
+        for ingredient in section.get("ingredients", [])
+        if isinstance(ingredient, dict) and isinstance(ingredient.get("name"), str)
+    ]
+
+
+def _query_constraints(query: str) -> tuple:
+    """Extract excluded ingredients and prepare a semantic query for alternatives."""
+    excluded_ingredients = [
+        match.group(1).casefold()
+        for match in INGREDIENT_EXCLUSION_PATTERN.finditer(query)
+    ]
+    semantic_query = INGREDIENT_EXCLUSION_PATTERN.sub("", query).strip()
+
+    if "honey" in excluded_ingredients:
+        semantic_query = (
+            f"{semantic_query} recipe naturally sweetened with fruit, "
+            "such as mashed banana or unsweetened applesauce, instead of honey"
+        ).strip()
+
+    return excluded_ingredients, semantic_query or query
+
+
+def _has_excluded_ingredient(recipe: dict, excluded_ingredients: list) -> bool:
+    ingredient_text = " ".join(_ingredient_names(recipe)).casefold()
+    return any(
+        re.search(rf"(?<!\w){re.escape(ingredient)}(?!\w)", ingredient_text)
+        for ingredient in excluded_ingredients
+    )
+
+
 # ----------------------------------------------------------------------------------------------------
 def load_model_and_data(
     use_cuda: bool,
@@ -122,24 +163,33 @@ def search(
     if language not in DOCUMENTS_EMBEDDING_BY_LANGUAGE:
         return
 
+    excluded_ingredients, semantic_query = _query_constraints(query)
+    candidate_indices = [
+        index
+        for index, recipe in enumerate(RECIPES_BY_LANGUAGE[language])
+        if not _has_excluded_ingredient(recipe, excluded_ingredients)
+    ]
+    if not candidate_indices:
+        return []
+
     # Encode the search query
     query_embedding = MODEL.encode(
-        query,
+        semantic_query,
         prompt_name="query",
         convert_to_numpy=False
     )
 
-    # Calculate similarity scores against that language's embeddings
+    # Rank only recipes that satisfy explicit ingredient exclusions.
     similarities = MODEL.similarity(
         query_embedding,
-        DOCUMENTS_EMBEDDING_BY_LANGUAGE[language]
-    ).squeeze()
+        DOCUMENTS_EMBEDDING_BY_LANGUAGE[language][candidate_indices]
+    ).reshape(-1)
 
     # Get indices of top-k most similar documents
-    k = min(top_k, len(similarities))
+    k = min(top_k, len(candidate_indices))
     top_indices = torch.topk(similarities, k=k).indices.tolist()
 
-    return [RECIPES_BY_LANGUAGE[language][index] for index in top_indices]
+    return [RECIPES_BY_LANGUAGE[language][candidate_indices[index]] for index in top_indices]
 
 
 def _search_ui(
@@ -285,6 +335,8 @@ def main():
             show_progress=False
         )
         demo.launch(
+            server_name="0.0.0.0",  # MUST be 0.0.0.0 to accept external requests
+            server_port=7860,
             share=True,
             mcp_server=True
         )

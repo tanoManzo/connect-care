@@ -1,18 +1,22 @@
-QUERY="cheesecake"
-TOP_K=1
-API_TOKEN="connect-care"
-ADDRESS="https://xxxxx.gradio.live"
+QUERY="${QUERY:-apple dessert for 2 people}"
+TOP_K="${TOP_K:-3}"
+LANGUAGE="${LANGUAGE:-en}"
+ADDRESS="${ADDRESS:-https://ready-jobs-reply.loca.lt}"
+API_TOKEN="${API_TOKEN:-connect-care}"
 
 EVENT_ID=$(
-  curl -X POST $ADDRESS/gradio_api/call/v2/search \
-    -s \
+  curl -sS -X POST "$ADDRESS/gradio_api/call/v2/search" \
     -H "Content-Type: application/json" \
     -H "X-Api-Token: $API_TOKEN" \
-    -d "{\"query\": \"$QUERY\", \"top_k\": $TOP_K, \"language\": \"en\"}" \
-  | awk -F'"' '{print $4}'
+    -d "$(jq -n \
+      --arg query "$QUERY" \
+      --arg language "$LANGUAGE" \
+      --argjson top_k "$TOP_K" \
+      '{query: $query, top_k: $top_k, language: $language}')" \
+  | jq -er '.event_id // .[0]'
 )
 
-curl -N $ADDRESS/gradio_api/call/v2/search/$EVENT_ID \
+curl -sSN "$ADDRESS/gradio_api/call/v2/search/$EVENT_ID" \
   | grep '^data:' \
   | sed 's/^data: //' \
   | jq -r '.[0]'

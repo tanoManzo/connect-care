@@ -111,3 +111,87 @@ curl -N $ADDRESS/gradio_api/call/v2/search/$EVENT_ID \
   | sed 's/^data: //' \
   | jq -r '.[0]'
 ```
+
+### Personalized Recommendation Example
+
+The recommendation server runs `AI_search.sh` internally. Colleagues only need its public URL, `curl`, and `jq`, not access to the backend services.
+
+```bash
+ADDRESS="https://tangy-pots-relax.loca.lt" \
+USER_ID="user_001" \
+QUERY="apple dessert for 2 people, no honey" \
+sh connect_care_recommendation_example.sh
+```
+
+The JSON contains `recipe`, `updated_recipe`, `latest_calories_in`, and the full `recipes` and `updated_recipes` lists. Calories are fetched from the trajectory API for `USER_ID`; if unavailable, invalid, or timed out, calories default to `0`.
+
+Alternatively, query the Gradio API directly:
+
+```bash
+ADDRESS="https://tangy-pots-relax.loca.lt"
+EVENT_ID=$(curl -fsS "$ADDRESS/gradio_api/call/run_recipe_search" \
+  -H "Content-Type: application/json" \
+  -H "bypass-tunnel-reminder: true" \
+  -d '{"data": ["user_001", "apple dessert for 2 people, no honey", "en", 3]}' \
+  | jq -er '.event_id')
+curl -fsSN "$ADDRESS/gradio_api/call/run_recipe_search/$EVENT_ID" \
+  -H "bypass-tunnel-reminder: true" \
+  | sed -n 's/^data: //p' | jq '.[0]'
+```
+
+The argument order is user ID, recipe query, output language (`en`, `es`, `ca`, or `da`), and `top_k` (positive integer; defaults to 3 in the shell example). The LocalTunnel URL above was started on 2026-10-23 and only works while the tunnel and backend services are running. It can change when the tunnel restarts; update the example's `ADDRESS` accordingly. This is a public, unauthenticated demo endpoint; do not send sensitive user information.
+
+#### Running in tmux
+
+From the project directory:
+
+```bash
+tmux new-session -d -s connect-care -n model 'bash launch_vllm_server.sh; exec bash'
+tmux new-window -t connect-care -n search 'API_TOKEN=connect-care bash launch_search_server.sh; exec bash'
+tmux new-window -t connect-care -n recommendations 'bash launch_ai_search_app.sh; exec bash'
+tmux new-session -d -s connect-care-tunnel -n tunnel 'npx --yes localtunnel --port 7862 --local-host 127.0.0.1; exec bash'
+tmux attach -t connect-care
+```
+
+Use `tmux attach -t connect-care-tunnel` to see the LocalTunnel URL to share. tmux survives SSH disconnects, not power outages; rerun the commands after a reboot. On the recommendation server, configure `USER_API_ADDRESS`, `SEARCH_API_ADDRESS`, and `LLM_API_ADDRESS` if needed (defaults: localhost ports 8000, 7860, and 3960). Wait for the model and search server to finish loading before querying recommendations.
+
+### Move the Recommendation Service to a New Server
+
+These steps move the current working tree and the existing recipe indexes to a Linux server with an NVIDIA GPU. Run the copy command on the current machine from the repository root. It includes modified and untracked project files, but skips rebuildable environments and caches:
+
+```bash
+rsync -av --info=progress2 \
+  --exclude='.venv/' \
+  --exclude='node_modules/' \
+  --exclude='.gradio/' \
+  --exclude='__pycache__/' \
+  ./ USER@SERVER:/srv/connect-care/
+```
+
+Replace `USER` and `SERVER` with the SSH account and hostname. The four `data/recipes.*.jsonl` files are included. The raw source files under `data/recipes/` are not needed to serve the existing indexes; copy them separately if you also need to rerun extraction or translation.
+
+On the new server, install a compatible NVIDIA driver, `uv`, `tmux`, `curl`, and `jq`. Confirm the GPU is visible with `nvidia-smi`, then install the locked Python dependencies:
+
+```bash
+cd /srv/connect-care
+uv sync --frozen
+```
+
+Start the services in this order, each in its own terminal or tmux window:
+
+```bash
+# Model API on port 3960; first launch downloads the model from Hugging Face.
+bash launch_vllm_server.sh
+
+# Recipe search on port 7860. Set a private token rather than using the default.
+API_TOKEN='REPLACE_WITH_A_PRIVATE_TOKEN' bash launch_search_server.sh
+
+# Recommendation UI on port 7862.
+API_TOKEN='REPLACE_WITH_A_PRIVATE_TOKEN' \
+USER_API_ADDRESS='http://USER_API_HOST:8000' \
+bash launch_ai_search_app.sh
+```
+
+Use the same `API_TOKEN` for the search and recommendation services. Replace `USER_API_HOST` with the host running the trajectory API; if it is unavailable, calorie lookup falls back to `0` and the user list falls back to `user_001`. The model and embedding models are downloaded on first use, so allow outbound access to Hugging Face and enough disk space for model weights. vLLM requires a GPU and driver combination supported by the installed vLLM release; verify compatibility for the destination GPU before relying on the default model.
+
+Keep ports 3960, 7860, and 8000 restricted to localhost or the private network. The current Gradio launchers use `share=True`, which creates public, unauthenticated share URLs; do not use those URLs for sensitive data. Disable public sharing or put the UI behind an authenticated access layer before production use. The LocalTunnel URL from the old server will not transfer; create a new tunnel or configure a stable authenticated public endpoint for port 7862.
